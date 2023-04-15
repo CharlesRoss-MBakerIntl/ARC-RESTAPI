@@ -180,13 +180,10 @@ def token_generation(username, password):
 
 ###################################################### CONVERT AGOL SERVICE URL TO PANDAS DF #############################################################
 
-def agol_table_to_pd(table_service_url, token, geometry = "N", convert_dates = "Y", drop_objectids = "N"):
+def agol_table_to_pd(service_url, layer, token, geometry = "N", convert_dates = "Y", drop_objectids = "N"):
 
-    #Check if Service URL Contains Correct Query Add-ON
-    if "/0/query" not in table_service_url:
-        table_service_url = table_service_url+"/0/query"
+    url = f'{service_url}/{str(layer)}/query'
 
-    
     #Enter Serach Parameters to Pull Data Table
     if geometry.lower() == "y":
         params = {
@@ -207,7 +204,7 @@ def agol_table_to_pd(table_service_url, token, geometry = "N", convert_dates = "
         }
 
     #Send Repsonse to Pull Table
-    response = requests.get(table_service_url, params=params)
+    response = requests.get(url, params=params)
 
     #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
     if response.status_code == 200:
