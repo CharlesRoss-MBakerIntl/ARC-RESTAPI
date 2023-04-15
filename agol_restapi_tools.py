@@ -412,7 +412,7 @@ def locate_objectid(service_url, layer, token, uid_field, uid, objectid_field):
     }
 
     query_response = requests.get(query_url, query_params).json()
-    objectid = query_response['features'][0]['attributes']['ObjectId']
+    objectid = query_response['features'][0]['attributes'][objectid_field]
 
     return objectid
 
