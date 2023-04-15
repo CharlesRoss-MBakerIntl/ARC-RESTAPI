@@ -221,6 +221,19 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             elif "objectid" in df.columns:
                 df = df.drop(columns = "objectid")
 
+            elif "OBJECTID" in df.columns:
+                df = df.drop(columns = "OBJECTID")
+
+            elif "Fid" in df.columns:
+                df = df.drop(columns = "Fid")
+
+            elif "fid" in df.columns:
+                df = df.drop(columns = "fid")
+
+            elif "FID" in df.columns:
+                df = df.drop(columns = "FID")
+
+            
     #Report Error
     else:
         raise Exception("Failed to Pull Table  -  " + str(response.status_code))
