@@ -180,7 +180,7 @@ def token_generation(username, password):
 
 ###################################################### CONVERT AGOL SERVICE URL TO PANDAS DF #############################################################
 
-def agol_table_to_pd(service_url, layer, token, geometry = "N", convert_dates = "n", drop_objectids = "n"):
+def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = "n", drop_objectids = "n"):
 
     url = f'{service_url}/{str(layer)}/query'
 
@@ -227,10 +227,10 @@ def agol_table_to_pd(service_url, layer, token, geometry = "N", convert_dates = 
 
 
     #Catch All Date Fields and Convert to Pandas Datetime if Selected
-    if convert_dates == "Y":
+    if convert_dates.lower() == "y":
         agol_date_convert_akt(data, df)
     
-    elif convert_dates == "N":
+    elif convert_dates.lower() == "n":
         pass
 
     else:
