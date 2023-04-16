@@ -430,3 +430,144 @@ def locate_objectid(service_url, layer, token, uid_field, uid, objectid_field):
 def catch_response():
     #Complile List of Responses and Return List
     pass
+
+
+
+
+
+
+
+
+############################################## CATCH SUCCESS OR ERROR MESSAGES FROM ARC REST API RESPONSE #######################################################
+def update_project_information(feature_url, feature_layer, objectid_field, token, exclude_fields = []):
+
+    print("Updating Project Information")
+
+    ############################### PULL AUTHORITATIVE PROJECT INFORMATION ###############################
+
+    #Set Project Polygon Base Layer Dataframe
+    project_url = "https://services.arcgis.com/r4A0V7UzH9fcLVvv/arcgis/rest/services/CY2023_Project_Polygons_notcleaned/FeatureServer"
+    projects = agol_table_to_pd(service_url = project_url, layer = 64, token = token, drop_objectids='y', geometry = 'n', convert_dates='n')
+
+    if "Unique_ID" in projects.columns and "UID" not in projects.columns:
+        projects.rename(columns = {'Unique_ID':"UID"}, inplace = True)
+
+
+    #Convert UID to Str for Matching
+    projects["UID"] = projects["UID"].astype(str)
+
+    #Fill NaNs in Table
+    projects.fillna("None", inplace = True)
+
+    #Remove Exclude Fields
+    projects.drop(columns = exclude_fields, inplace = True)
+
+
+
+    
+    ############################### PULL FEATURE TABLE TO UPDATE ###############################
+
+    #Features to Update Dataframe
+    features = agol_table_to_pd(service_url = feature_url, layer = feature_layer, token = token, drop_objectids='y', geometry = 'n', convert_dates='n')
+    features.fillna("None", inplace = True)
+
+
+
+
+    ############################### REMOVE FIELDS THAT ARE NOT IN FEATURE TABLE ###############################
+
+    #Keep Columns in Project Layer that Exist within the Feature Layer
+    remove_list = []
+
+    for column in projects.columns:
+        if column not in features.columns:
+            remove_list.append(column)
+
+    projects.drop(columns = remove_list, inplace = True)
+
+
+
+
+    ############################### UPDATE VALUES BASED ON PROJECT UID ###############################
+
+    #Check if UID Exists in Both Tables'
+    if "UID" in projects.columns and "UID" in features.columns:
+
+        #Iterate through Survey Entry List, if UID Entry Already Exists in Table, Skip, If Not, Update in Connect Table
+        project_uids = list(projects['UID'].unique())
+        features_uids = list(features["UID"].unique())
+
+
+        #Iterate Through Feature UIDS
+        for uid in project_uids:
+
+            #Create Switch
+            update_switch = ""
+            
+            #Create Update Entry
+            proj_info = projects.loc[projects["UID"]== uid].reset_index(drop = True)
+            
+            #Check if Entry Already in Connection Table
+            if uid in features_uids:
+
+                #Locate Connect UID Entry
+                feature_entry = features.loc[features["UID"] == uid].reset_index(drop = True)
+                feature_entry = feature_entry[proj_info.columns]
+
+                #Build Update Attribute Package
+                update_package =  [
+                    {
+                        "attributes": {
+                        "OBJECTID": ''
+                        }
+                    }
+                        ]
+
+
+                #Iterate Through Values, Check if Value is New, Append to Update Package if New Value Found
+                column_count = 0
+                for column in feature_entry.columns:
+                    if column in proj_info.columns:
+
+                        #Check if Fields Match
+                        if proj_info[column].loc[0] != feature_entry[column].loc[0]:
+
+                            #Pull Value
+                            value = proj_info[column].loc[0]
+
+                            update_package[0]['attributes'][column] = proj_info[column].loc[0]
+                            column_count += 1
+                
+                
+                #Set None Values to None before Update
+                for key, values in update_package[0]['attributes'].items():
+                    if values == 'None':
+                        update_package[0]['attributes'][key] = None
+                
+                            
+                #Check Number of Updated Columns, Flip Update Switch if More Than One
+                if column_count != 0:
+                    update_switch = 'update'
+                    print(f"Found {column_count} New Updates for UID: {uid}")
+
+
+                #If Update Switch Flipped, Update Hosted Table
+                if update_switch == 'update':
+                    
+                    #Locate the ObjectID Based on UID
+                    objectid = locate_objectid(feature_url, str(feature_layer), token, "UID", uid, objectid_field)
+                    update_package[0]['attributes'][objectid_field] = objectid
+                    
+
+                    #Update Project in Hosted Table
+                    print(add_update_del_agol(mode = 'update', 
+                                            url = feature_url, 
+                                            layer = "0", 
+                                            token = token,  
+                                            data = update_package))
+                    print("")
+
+
+    else:
+        raise Exception("UID Not Present in Both Tables, Update Not Possible")
+
