@@ -438,7 +438,8 @@ def catch_response():
 
 
 
-############################################## CATCH SUCCESS OR ERROR MESSAGES FROM ARC REST API RESPONSE #######################################################
+############################################## UPDATE PROJECT INFORMATION OF FEATURE TABLE #######################################################
+
 def update_project_information(feature_url, feature_layer, objectid_field, token, exclude_fields = []):
 
     print("Updating Project Information")
