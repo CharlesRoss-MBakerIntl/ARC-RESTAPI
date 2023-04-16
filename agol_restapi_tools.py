@@ -370,7 +370,7 @@ def add_update_del_agol(mode, url, layer, token,  data):
     #Update Records in Table
     elif mode == 'update':
 
-        data = json.dumps(package)
+        data = json.dumps(data)
 
         if "None" in data:
             data.replace("None", "null")
