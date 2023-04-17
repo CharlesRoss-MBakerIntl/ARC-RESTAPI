@@ -406,7 +406,7 @@ def add_update_del_agol(mode, url, layer, token,  data):
         update_params = {
                         'f':'json',
                         'token':token,
-                        "updates": f'{data}'
+                        "updates": f'{data}'.replace("None", 'null')
                         }
 
         update_response = requests.patch(service_url, update_params)
