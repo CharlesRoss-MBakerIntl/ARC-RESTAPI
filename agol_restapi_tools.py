@@ -70,6 +70,39 @@ def agol_date_convert_akt(agol_data, agol_df):
 
 
 
+############################################## GRAB THE OID FIELD FOR A FEATURE LAYER #######################################################
+
+def oid_field(service_url, layer, token, ):
+
+    #Set Query URL
+    url = f'{service_url}/{str(layer)}/query'
+
+    #Set Query Params
+    params = {
+        'f': 'json',
+        'where':'1=1',           # response format
+        'outFields': '*',       # fields to include in the response
+        'returnGeometry': 'false',
+        'token':token  # don't include geometry
+    }
+
+    #Send Response to AGOL
+    response = requests.get(url = url, params=params)
+
+    #Pull Table Data
+    data = json.loads(response.text)
+
+
+    #Search for OID Field in Table
+    oid_field = None
+
+    for field in data['fields']:
+        if field['type'] == 'esriFieldTypeOID':
+            oid_field = field['name']
+            break
+
+    return oid_field
+
 
 
 ######################################################## COMPARE COLUMNS BEFORE SUBMITTING TO AGOL ######################################################################
@@ -346,7 +379,7 @@ def add_new_logs(new_logs_df, table_service_url, token):
 def add_update_del_agol(mode, url, layer, token,  data):
 
     #Set applyEdits URL
-    service_url = f'{url}/{layer}/applyEdits'
+    service_url = f'{url}/{str(layer)}/applyEdits'
 
     #Add Data to Table
     if mode == "add":
@@ -407,7 +440,7 @@ def add_update_del_agol(mode, url, layer, token,  data):
 ################################################### LOCATE OBJECTID BASED ON UID ##########################################################
 
 def locate_objectid(service_url, layer, token, uid_field, uid, objectid_field):
-    query_url = f"{service_url}/{layer}/query"
+    query_url = f"{service_url}/{str(layer)}/query"
 
     query_params = {
         'f':'json',
