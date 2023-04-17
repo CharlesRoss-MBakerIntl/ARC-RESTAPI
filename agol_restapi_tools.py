@@ -600,3 +600,101 @@ def update_project_information(feature_url, feature_layer, objectid_field, token
     else:
         raise Exception("UID Not Present in Both Tables, Update Not Possible")
 
+
+
+
+
+
+
+
+############################################## UPDATE FEATURE LAYER WITH WEEKLY SURVERY DATA #######################################################
+
+def update_survey_information(survey_df, projects_df, features_df, features_url, features_layer, token):
+
+    #################### PROJECT AND FEATURE TABLE SET UP ##########################
+
+    #Check if UID Field Exists Across All DataFrames
+    if "UID" in survey_df.columns and "UID" in projects_df.columns and "UID" in features_df.columns:
+
+        #Make All UID Fields Match
+        survey_df['UID'] = survey_df['UID'].astype("int64")
+        projects_df['UID'] = projects_df['UID'].astype("int64")
+        features_df['UID'] = features_df['UID'].astype("int64")
+
+        #Grab Features OID Field
+        features_oid = oid_field(service_url = features_url, layer = features_layer, token = token)
+
+        #Iterate through Survey Entry List, if UID Entry Already Exists in Table, Skip, If Not, Update in Connect Table
+        update_uids = list(survey_df['UID'].unique())
+        features_uids = list(features_df["UID"].unique())
+
+
+
+
+        #################### CREATE UPDATE PACKAGE ##########################
+
+        #Iteratge through UID Lists and Check for Updates for Each Project
+        for uid in update_uids:
+
+            #Create Switch
+            update_switch = ""
+            
+            #Create Update Entry
+            proj_info = projects_df.loc[projects_df["UID"]== uid].reset_index(drop = True)
+            survey_info = survey_df.loc[survey_df["UID"] == uid].reset_index(drop = True)
+
+            #Create an Update Entry Row
+            update_entry = pd.concat([proj_info, survey_info], join = 'inner', axis = 1).drop_duplicates().reset_index(drop=True)
+            update_entry = update_entry.loc[:, ~update_entry.columns.duplicated()]
+
+
+            #Check if Entry Already in Connection Table
+            if uid in features_uids:
+
+                #Locate Connect UID Entry
+                features_entry = features_df.loc[features_df["UID"] == uid].reset_index(drop = True)
+
+                #Build Update Attribute Package
+                update_package =  [
+                    {
+                        "attributes": {
+                        features_oid: ''
+                        }
+                    }
+                        ]
+                
+                #Iterate Through Values, Check if Value is New, Append to Update Package if New Value Found
+                column_count = 0
+                for column in features_entry.columns:
+                    if column in update_entry.columns:
+                        if update_entry[column].loc[0] != features_entry[column].loc[0]:
+                            update_package[0]['attributes'][column] = update_entry[column].loc[0]
+                            column_count += 1
+                            
+
+
+
+                #################### UPDATE AGOL TABLE IF UPDATES FOUND ##########################
+
+                #Check Number of Updated Columns, Flip Update Switch if More Than One
+                if column_count != 0:
+                    update_switch = 'update'
+                    print(f"Found {column_count} New Updates for UID: {uid}")
+
+                #If Update Switch Flipped, Update Hosted Table
+                if update_switch == 'update':
+
+                    #Locate the ObjectID Based on UID
+                    objectid = locate_objectid(features_url, "0", token, "UID", uid, features_oid)
+                    update_package[0]['attributes'][features_oid] = objectid
+
+                    #Send Updates to Hosted Table
+                    print(add_update_del_agol(mode = 'update', 
+                                            url = features_url, 
+                                            layer = "0", 
+                                            token = token,  
+                                            data = update_package))
+                    print("")
+
+    else:
+        raise Exception("UID Field Not Present in All Columns")
