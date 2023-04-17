@@ -72,7 +72,7 @@ def agol_date_convert_akt(agol_data, agol_df):
 
 ############################################## GRAB THE OID FIELD FOR A FEATURE LAYER #######################################################
 
-def oid_field(service_url, layer, token, ):
+def oid_field(service_url, layer, token):
 
     #Set Query URL
     url = f'{service_url}/{str(layer)}/query'
@@ -403,7 +403,7 @@ def add_update_del_agol(mode, url, layer, token,  data):
     #Update Records in Table
     elif mode == 'update':
 
-        data = json.dumps(data)
+        data = json.dumps(f'{data}')
 
         if "None" in data:
             data.replace("None", "null")
