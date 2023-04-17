@@ -403,15 +403,10 @@ def add_update_del_agol(mode, url, layer, token,  data):
     #Update Records in Table
     elif mode == 'update':
 
-        data = json.dumps(f'{data}')
-
-        if "None" in data:
-            data.replace("None", "null")
-
         update_params = {
                         'f':'json',
                         'token':token,
-                        "updates": data
+                        "updates": f'{data}'
                         }
 
         update_response = requests.patch(service_url, update_params)
