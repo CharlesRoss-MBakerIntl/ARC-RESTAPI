@@ -691,7 +691,7 @@ def update_survey_information(survey_df, projects_df, features_df, features_url,
                     #Send Updates to Hosted Table
                     print(add_update_del_agol(mode = 'update', 
                                             url = features_url, 
-                                            layer = "0", 
+                                            layer = str(features_layer), 
                                             token = token,  
                                             data = update_package))
                     print("")
