@@ -3,6 +3,9 @@ import json
 import pandas as pd
 import pytz
 
+import warnings
+warnings.simplefilter('ignore')
+
 
 
 ############################################################ CREATE LOG IDS IN TABLES ######################################################################
