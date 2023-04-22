@@ -228,6 +228,7 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             'returnGeometry':True,
             'where': '1=1',  
             'outFields': '*',
+            "geometryType": "esriGeometryPoint",
             "outSR": "4326"
         }
 
