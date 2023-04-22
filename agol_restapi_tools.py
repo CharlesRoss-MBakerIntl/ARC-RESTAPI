@@ -231,6 +231,26 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             'outFields': '*',
         }
 
+        #Send Repsonse to Pull Table
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+
+            #Create Data from Response
+            data = json.loads(response.content)
+
+            #Grab Features
+            df = pd.json_normalize(data['features'])
+            df = pd.concat([df.drop(['attributes'], axis=1), df['attributes'].apply(pd.Series)], axis=1)
+
+            #Grab Geometry
+            df['Longitude'] = df['geometry'].apply(lambda geom: geom['x'])
+            df['Latitude'] = df['geometry'].apply(lambda geom: geom['y'])
+
+            #Create Table
+            df = df.drop(['geometry', 'objectid'], axis=1)
+
+
     elif geometry.lower() == "n":
         params = {
             'f': 'json',
@@ -239,40 +259,39 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             'outFields': '*',
         }
 
-    #Send Repsonse to Pull Table
-    response = requests.get(url, params=params)
+        #Send Repsonse to Pull Table
+        response = requests.get(url, params=params)
 
-    #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
-    if response.status_code == 200:
-        data = response.json()
-        table = data.get('features', [])
-        df = pd.DataFrame([row['attributes'] for row in table])
+        #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
+        if response.status_code == 200:
+            data = response.json()
+            table = data.get('features', [])
+            df = pd.DataFrame([row['attributes'] for row in table])
 
 
-        if drop_objectids.lower() == "y":
-        #Drop ObjectID
-            if "ObjectId" in df.columns:
-                df = df.drop(columns = "ObjectId")
 
-            elif "objectid" in df.columns:
-                df = df.drop(columns = "objectid")
+    #Drop ObjectID
+    if drop_objectids.lower() == "y":
+    
+        if "ObjectId" in df.columns:
+            df = df.drop(columns = "ObjectId")
 
-            elif "OBJECTID" in df.columns:
-                df = df.drop(columns = "OBJECTID")
+        elif "objectid" in df.columns:
+            df = df.drop(columns = "objectid")
 
-            elif "Fid" in df.columns:
-                df = df.drop(columns = "Fid")
+        elif "OBJECTID" in df.columns:
+            df = df.drop(columns = "OBJECTID")
 
-            elif "fid" in df.columns:
-                df = df.drop(columns = "fid")
+        elif "Fid" in df.columns:
+            df = df.drop(columns = "Fid")
 
-            elif "FID" in df.columns:
-                df = df.drop(columns = "FID")
+        elif "fid" in df.columns:
+            df = df.drop(columns = "fid")
 
-            
-    #Report Error
-    else:
-        raise Exception("Failed to Pull Table  -  " + str(response.status_code))
+        elif "FID" in df.columns:
+            df = df.drop(columns = "FID")
+
+
 
 
     #Catch All Date Fields and Convert to Pandas Datetime if Selected
@@ -285,6 +304,8 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
     else:
         pass
 
+    
+    
     return df
 
 
