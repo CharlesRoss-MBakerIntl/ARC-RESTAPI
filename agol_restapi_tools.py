@@ -235,20 +235,12 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
         response = requests.get(url, params=params)
 
         if response.status_code == 200:
-
-            #Create Data from Response
-            data = json.loads(response.content)
-
+                
             #Grab Features
+            data = json.loads(response.content)
             df = pd.json_normalize(data['features'])
-            df = pd.concat([df.drop(['attributes'], axis=1), df['attributes'].apply(pd.Series)], axis=1)
-
-            #Grab Geometry
-            df['Longitude'] = df['geometry'].apply(lambda geom: geom['x'])
-            df['Latitude'] = df['geometry'].apply(lambda geom: geom['y'])
-
-            #Create Table
-            df = df.drop(['geometry', 'objectid'], axis=1)
+            df.columns = df.columns.str.replace('attributes.', '').str.replace('geometry.', '')
+            df.columns = df.columns.str.replace('x', 'Longitude').str.replace('y', 'Latitude')
 
 
     elif geometry.lower() == "n":
