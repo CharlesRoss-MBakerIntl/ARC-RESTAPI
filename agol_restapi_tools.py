@@ -226,9 +226,9 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             'f': 'json',
             'token': token,
             'returnGeometry':True,
-            'returnAttachments':True,
             'where': '1=1',  
             'outFields': '*',
+            "outSR": "4326"
         }
 
         #Send Repsonse to Pull Table
@@ -242,64 +242,63 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             df.columns = df.columns.str.replace('attributes.', '').str.replace('geometry.', '')
             df.columns = df.columns.str.replace('x', 'Longitude').str.replace('y', 'Latitude')
 
-            return df
 
-    # elif geometry.lower() == "n":
-    #     params = {
-    #         'f': 'json',
-    #         'token': token,
-    #         'where': '1=1',  
-    #         'outFields': '*',
-    #     }
+    elif geometry.lower() == "n":
+        params = {
+            'f': 'json',
+            'token': token,
+            'where': '1=1',  
+            'outFields': '*',
+        }
 
-    #     #Send Repsonse to Pull Table
-    #     response = requests.get(url, params=params)
+        #Send Repsonse to Pull Table
+        response = requests.get(url, params=params)
 
-    #     #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
-    #     if response.status_code == 200:
-    #         data = response.json()
-    #         table = data.get('features', [])
-    #         df = pd.DataFrame([row['attributes'] for row in table])
-
+        #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
+        if response.status_code == 200:
+            data = response.json()
+            table = data.get('features', [])
+            df = pd.DataFrame([row['attributes'] for row in table])
 
 
-    # #Drop ObjectID
-    # if drop_objectids.lower() == "y":
+
+    #Drop ObjectID
+    if drop_objectids.lower() == "y":
     
-    #     if "ObjectId" in df.columns:
-    #         df = df.drop(columns = "ObjectId")
+        if "ObjectId" in df.columns:
+            df = df.drop(columns = "ObjectId")
 
-    #     elif "objectid" in df.columns:
-    #         df = df.drop(columns = "objectid")
+        elif "objectid" in df.columns:
+            df = df.drop(columns = "objectid")
 
-    #     elif "OBJECTID" in df.columns:
-    #         df = df.drop(columns = "OBJECTID")
+        elif "OBJECTID" in df.columns:
+            df = df.drop(columns = "OBJECTID")
 
-    #     elif "Fid" in df.columns:
-    #         df = df.drop(columns = "Fid")
+        elif "Fid" in df.columns:
+            df = df.drop(columns = "Fid")
 
-    #     elif "fid" in df.columns:
-    #         df = df.drop(columns = "fid")
+        elif "fid" in df.columns:
+            df = df.drop(columns = "fid")
 
-    #     elif "FID" in df.columns:
-    #         df = df.drop(columns = "FID")
-
-
+        elif "FID" in df.columns:
+            df = df.drop(columns = "FID")
 
 
-    # #Catch All Date Fields and Convert to Pandas Datetime if Selected
-    # if convert_dates.lower() == "y":
-    #     agol_date_convert_akt(data, df)
+
+
+    #Catch All Date Fields and Convert to Pandas Datetime if Selected
+    if convert_dates.lower() == "y":
+        agol_date_convert_akt(data, df)
     
-    # elif convert_dates.lower() == "n":
-    #     pass
+    elif convert_dates.lower() == "n":
+        pass
 
-    # else:
-    #     pass
+    else:
+        pass
 
     
     
-    #return df
+    return df
 
 
 
