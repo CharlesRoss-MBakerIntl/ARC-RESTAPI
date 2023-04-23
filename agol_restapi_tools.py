@@ -691,29 +691,27 @@ def update_survey_information(survey_df, starts_ends_df, projects_df, features_d
                             column_count += 1
                             
 
-                return update_entry, update_package
+                #################### UPDATE AGOL TABLE IF UPDATES FOUND ##########################
 
-    #             #################### UPDATE AGOL TABLE IF UPDATES FOUND ##########################
+                #Check Number of Updated Columns, Flip Update Switch if More Than One
+                if column_count != 0:
+                    update_switch = 'update'
+                    print(f"Found {column_count} New Updates for UID: {uid}")
 
-    #             #Check Number of Updated Columns, Flip Update Switch if More Than One
-    #             if column_count != 0:
-    #                 update_switch = 'update'
-    #                 print(f"Found {column_count} New Updates for UID: {uid}")
+                #If Update Switch Flipped, Update Hosted Table
+                if update_switch == 'update':
 
-    #             #If Update Switch Flipped, Update Hosted Table
-    #             if update_switch == 'update':
+                    #Locate the ObjectID Based on UID
+                    objectid = locate_objectid(features_url, "0", token, "UID", uid, features_oid)
+                    update_package[0]['attributes'][features_oid] = objectid
 
-    #                 #Locate the ObjectID Based on UID
-    #                 objectid = locate_objectid(features_url, "0", token, "UID", uid, features_oid)
-    #                 update_package[0]['attributes'][features_oid] = objectid
+                    #Send Updates to Hosted Table
+                    print(add_update_del_agol(mode = 'update', 
+                                            url = features_url, 
+                                            layer = str(features_layer), 
+                                            token = token,  
+                                            data = update_package))
+                    print("")
 
-    #                 #Send Updates to Hosted Table
-    #                 print(add_update_del_agol(mode = 'update', 
-    #                                         url = features_url, 
-    #                                         layer = str(features_layer), 
-    #                                         token = token,  
-    #                                         data = update_package))
-    #                 print("")
-
-    # else:
-    #     raise Exception("UID Field Not Present in All Columns")
+    else:
+        raise Exception("UID Field Not Present in All Columns")
