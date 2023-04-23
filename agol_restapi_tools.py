@@ -626,17 +626,18 @@ def update_project_information(feature_url, feature_layer, objectid_field, token
 
 ############################################## UPDATE FEATURE LAYER WITH WEEKLY SURVERY DATA #######################################################
 
-def update_survey_information(survey_df, projects_df, features_df, features_url, features_layer, token):
+def update_survey_information(survey_df, starts_ends_df, projects_df, features_df, features_url, features_layer, token):
 
     #################### PROJECT AND FEATURE TABLE SET UP ##########################
 
     #Check if UID Field Exists Across All DataFrames
-    if "UID" in survey_df.columns and "UID" in projects_df.columns and "UID" in features_df.columns:
+    if "UID" in survey_df.columns and "UID" in projects_df.columns and "UID" in features_df.columns and 'UID' in starts_ends_df.columns:
 
         #Make All UID Fields Match
         survey_df['UID'] = survey_df['UID'].astype("int64")
         projects_df['UID'] = projects_df['UID'].astype("int64")
         features_df['UID'] = features_df['UID'].astype("int64")
+        starts_ends_df['UID'] = starts_ends_df['UID'].astype("int64")
 
         #Grab Features OID Field
         features_oid = oid_field(service_url = features_url, layer = features_layer, token = token)
@@ -645,8 +646,7 @@ def update_survey_information(survey_df, projects_df, features_df, features_url,
         update_uids = list(survey_df['UID'].unique())
         features_uids = list(features_df["UID"].unique())
 
-
-
+        
 
         #################### CREATE UPDATE PACKAGE ##########################
 
@@ -659,9 +659,11 @@ def update_survey_information(survey_df, projects_df, features_df, features_url,
             #Create Update Entry
             proj_info = projects_df.loc[projects_df["UID"]== uid].reset_index(drop = True)
             survey_info = survey_df.loc[survey_df["UID"] == uid].reset_index(drop = True)
+            starts_ends_info = starts_ends_df.loc[starts_ends_df["UID"] == uid].reset_index(drop = True)
 
             #Create an Update Entry Row
             update_entry = pd.concat([proj_info, survey_info], join = 'inner', axis = 1).drop_duplicates().reset_index(drop=True)
+            update_entry = pd.concat([update_entry, starts_ends_info], join = 'inner', axis = 1).drop_duplicates().reset_index(drop=True)
             update_entry = update_entry.loc[:, ~update_entry.columns.duplicated()]
 
 
@@ -689,29 +691,29 @@ def update_survey_information(survey_df, projects_df, features_df, features_url,
                             column_count += 1
                             
 
+                return update_entry, update_package
 
+    #             #################### UPDATE AGOL TABLE IF UPDATES FOUND ##########################
 
-                #################### UPDATE AGOL TABLE IF UPDATES FOUND ##########################
+    #             #Check Number of Updated Columns, Flip Update Switch if More Than One
+    #             if column_count != 0:
+    #                 update_switch = 'update'
+    #                 print(f"Found {column_count} New Updates for UID: {uid}")
 
-                #Check Number of Updated Columns, Flip Update Switch if More Than One
-                if column_count != 0:
-                    update_switch = 'update'
-                    print(f"Found {column_count} New Updates for UID: {uid}")
+    #             #If Update Switch Flipped, Update Hosted Table
+    #             if update_switch == 'update':
 
-                #If Update Switch Flipped, Update Hosted Table
-                if update_switch == 'update':
+    #                 #Locate the ObjectID Based on UID
+    #                 objectid = locate_objectid(features_url, "0", token, "UID", uid, features_oid)
+    #                 update_package[0]['attributes'][features_oid] = objectid
 
-                    #Locate the ObjectID Based on UID
-                    objectid = locate_objectid(features_url, "0", token, "UID", uid, features_oid)
-                    update_package[0]['attributes'][features_oid] = objectid
+    #                 #Send Updates to Hosted Table
+    #                 print(add_update_del_agol(mode = 'update', 
+    #                                         url = features_url, 
+    #                                         layer = str(features_layer), 
+    #                                         token = token,  
+    #                                         data = update_package))
+    #                 print("")
 
-                    #Send Updates to Hosted Table
-                    print(add_update_del_agol(mode = 'update', 
-                                            url = features_url, 
-                                            layer = str(features_layer), 
-                                            token = token,  
-                                            data = update_package))
-                    print("")
-
-    else:
-        raise Exception("UID Field Not Present in All Columns")
+    # else:
+    #     raise Exception("UID Field Not Present in All Columns")
