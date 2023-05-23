@@ -8,39 +8,6 @@ warnings.simplefilter('ignore')
 
 
 
-############################################################ CREATE LOG IDS IN TABLES ######################################################################
-
-def create_log_ids(df, id_field, date_field):
-    
-    #Check for existing Log_ID Field
-    if "LOG_ID" not in df.columns:
-
-        #Check if Date Field in Columns
-        if id_field in df.columns:
-            #Check if ID Field in Columns
-            if date_field in df.columns: 
-
-                #Iterrate through DF and Create Log ID for Each Column
-                for index, row in df.iterrows():
-                    
-                    log_id = str(df.loc[index, id_field]) + "-" + str(df.loc[index, date_field])
-                    df.loc[index, "LOG_ID"] = log_id
-
-                #Return DF with LOG IDS
-                return df
-
-            #Date Field Not in int64 Format, Convert before Continuing
-            else:
-                raise Exception("Date Field not in Dataframe")
-
-        #Date Field not Found
-        else:
-            raise Exception("ID Field not in Dataframe")
-        
-
-
-
-
 
 ############################################################ CONVERT AGOL DATES TOOL ######################################################################
 
@@ -216,50 +183,26 @@ def token_generation(username, password):
 
 ###################################################### CONVERT AGOL SERVICE URL TO PANDAS DF #############################################################
 
-def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = "n", drop_objectids = "n"):
+def agol_table_to_pd(service_url, layer, token, convert_dates = "n", drop_objectids = "n"):
 
     url = f'{service_url}/{str(layer)}/query'
 
     #Enter Serach Parameters to Pull Data Table
-    if geometry.lower() == "y":
-        params = {
-            'f': 'json',
-            'token': token,
-            'returnGeometry':True,
-            'where': '1=1',  
-            'outFields': '*',
-            "geometryType": "esriGeometryPoint",
-            "outSR": "4326"
-        }
+    params = {
+        'f': 'json',
+        'token': token,
+        'where': '1=1',  
+        'outFields': '*',
+    }
 
-        #Send Repsonse to Pull Table
-        response = requests.get(url, params=params)
+    #Send Repsonse to Pull Table
+    response = requests.get(url, params=params)
 
-        if response.status_code == 200:
-                
-            #Grab Features
-            data = json.loads(response.content)
-            df = pd.json_normalize(data['features'])
-            df.columns = df.columns.str.replace('attributes.', '').str.replace('geometry.', '')
-            df.columns = df.columns.str.replace('x', 'Longitude').str.replace('y', 'Latitude')
-
-
-    elif geometry.lower() == "n":
-        params = {
-            'f': 'json',
-            'token': token,
-            'where': '1=1',  
-            'outFields': '*',
-        }
-
-        #Send Repsonse to Pull Table
-        response = requests.get(url, params=params)
-
-        #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
-        if response.status_code == 200:
-            data = response.json()
-            table = data.get('features', [])
-            df = pd.DataFrame([row['attributes'] for row in table])
+    #If Response Connection Successful, Pull Data and Convert to Pandas Dataframe
+    if response.status_code == 200:
+        data = response.json()
+        table = data.get('features', [])
+        df = pd.DataFrame([row['attributes'] for row in table])
 
 
 
@@ -285,8 +228,6 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
             df = df.drop(columns = "FID")
 
 
-
-
     #Catch All Date Fields and Convert to Pandas Datetime if Selected
     if convert_dates.lower() == "y":
         agol_date_convert_akt(data, df)
@@ -297,98 +238,65 @@ def agol_table_to_pd(service_url, layer, token, geometry = "n", convert_dates = 
     else:
         pass
 
+
+    #Fill NAs or Nans
+    df.fillna("", inplace = True)
     
-    
+
     return df
 
 
 
 
 
+###################################################### CONVERT AGOL SERVICE URL TO PANDAS DF WITH GEOMETRY #############################################################
 
-###################################################### ADD NEW LOGS TO AGOL #############################################################
+def agol_table_to_pd_with_geometry(service_url, layer, token, uid_field, uid = "*"):
 
-def add_new_logs(new_logs_df, table_service_url, token):
+    #Set Query URl
+    url = f'{service_url}/{str(layer)}/query'
 
-    """
-    Add new log entries to the log book hosted in arcgis online. Add the pandas dataframe version of the new log entry, the 
-    table service url found on the tables arcgis online page, and a generated token from the ArcGIS REST API.
-    """
-
-    #Create Empty Message to be Returned at End of Process
-    message = ""
-    
-    #Convert the New Logs to JSON Attributes
-    log_to_attr = pd_to_attributes_list(new_logs_df)
-
-    #Pull Existing Log Ids
-    log_ids = agol_table_to_pd(table_service_url, token)['LOG_ID'].to_list()
-
-    #Create an Empty New Log List to Add to the Hosted Table
-    new_logs = []
-
-    #Create Empty List to Store Log IDS for Later Check
-    new_log_check = []
-
-    #Create a List of the New Log IDS
-    for entry in log_to_attr:
+    if uid != "*" and type(uid) == int:
         
-        for attributes in entry.values():
-            
-            #Grab LOG ID and Place into List for Later Check
-            log_id = attributes['LOG_ID']
-            new_log_check.append(log_id)
+        #Enter Serach Parameters to Pull Data Table
+        params = {
+        'where': f'{uid_field}={uid}',
+        'outFields': '*',
+        'returnGeometry': 'true',
+        'f': 'geojson',
+        'token':token
+        }
 
-            #Check if LOG ID Already Exists in Existing Table, If Not, Add to New Logs List
-            if log_id not in log_ids:
-                new_logs.append(entry)
+   
+    elif uid == "*":
+        #Enter Serach Parameters to Pull Data Table
+        params = {
+        'where':"1=1",
+        'outFields': '*',
+        'returnGeometry': 'true',
+        'f': 'geojson',
+        'token':token
+        }
+
+
+    else:
+        raise Exception("UID is not an Integer")
     
 
-    #Check if New Logs Empty, if Not, Proceed to Upload Data to Hosted Table
-    if new_logs != []:
+    #Send Pull Request
+    response = requests.get(url, params)
 
-        #Service URL to APPEND DATA
-        if "/0/addFeatures" not in table_service_url:
-            features_service_url = table_service_url + '/0/addFeatures'
-        
-        elif "/0/addFeatures" in table_service_url:
-            features_service_url = table_service_url
-
-        params = {'f': 'json', 'token': token}
-
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-        data = {'f': 'json', 'token': token, 'features': json.dumps(new_logs)}
-        
-        response = requests.post(features_service_url, params=params, headers = headers, data = data)
+    # Extract the geometry from the response
+    data = response.json()
+    geometry = [feature['geometry'] for feature in data['features']]
 
 
-        #Confirm New Logs have been Added to the Hosted Table
-        check_log_ids = agol_table_to_pd(table_service_url, token)['LOG_ID'].to_list()
-        
-        #Create a Check System to Ensure all Log IDs have been entered
-        check = []
-
-        for log_id in new_log_check:
-            if log_id in check_log_ids:
-                check.append(True)
-            elif log_id not in check_log_ids:
-                check.append(False)
-
-        if False not in check:
-            message = "New Log Entries Successfully Added to Log Book"
-
-        elif False in check:
-            raise Exception("New Log IDs Not in Updated Hosted Table, Please Try Again")
-
-        
-    #Log ID's Already Located in Log Book
-    elif new_logs == []:
-        
-        message = "Log IDs Already Present in Log Book"
+    return data, geometry
 
 
-    return message
+
+
+
 
 
 
